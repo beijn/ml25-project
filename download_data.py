@@ -44,5 +44,4 @@ def download_data():
   for url in [reviews_url, listings_url]:
     path = download_file(url)
     extract_file(path)
-
-download_data()
+    
