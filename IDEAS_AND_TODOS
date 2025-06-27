@@ -1,0 +1,3 @@
+
+
+- extend siren model to also predict the review score for each coordinate
