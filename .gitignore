@@ -1,4 +1,6 @@
-**/__pycache__/
-.venv
+**/.vscode/
 
-**/cache
+**/__pycache__/
+**/.venv/
+
+**/cache/
