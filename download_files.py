@@ -9,6 +9,7 @@ HTTPHeaders = Dict[str, str]
 listings_url = "https://data.insideairbnb.com/china/hk/hong-kong/2025-03-16/data/listings.csv.gz"
 reviews_url = "https://data.insideairbnb.com/china/hk/hong-kong/2025-03-16/data/reviews.csv.gz"
 
+
 def http_get_request(url: str, retry=5) -> bytes:
   headers = {}
   headers["Accept"] = '*/*'
@@ -28,20 +29,20 @@ def http_get_request(url: str, retry=5) -> bytes:
   if not res.closed: res.close()
   return body
 
-def download_file(url, into='./data/', overwrite=False):
+def download_file(url, into='./cache/', redownload=False):
   path = Path(into+'/'+Path(url).name)
-  if not overwrite and path.exists(): return path
+  if not redownload and path.exists(): return path
   path.parent.mkdir(parents=True, exist_ok=True)
   path.write_bytes(http_get_request(url))
   return path
 
-def extract_file(path:Path, into='./data/'):
+def extract_file_gz(path:Path, into='./cache/'):
   with gzip.open(path, 'rb') as f_in:
     with open(into+'/'+Path(path).name[:-3], 'wb') as f_out:  
       shutil.copyfileobj(f_in, f_out)
+  return Path(into+'/'+Path(path).name[:-3])
 
-def download_data():
-  for url in [reviews_url, listings_url]:
-    path = download_file(url)
-    extract_file(path)
-    
+def download_and_extract(url, redownload=False):
+  archive_path = download_file(url,redownload=redownload)
+  return extract_file_gz(archive_path)
+  
