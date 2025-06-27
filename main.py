@@ -19,3 +19,5 @@ for coords_batch, prices_batch in train_dl:
     print("Coordinates:", coords_batch.shape)
     print("Prices:", prices_batch.shape)
     break
+
+    
