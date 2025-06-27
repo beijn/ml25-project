@@ -1,9 +1,10 @@
 [project]
 name = "ml25-project"
 version = "0.1.0"
-description = "Predict AirBnB average rating from textual reviews."
+description = "Predict AirBnB price from coordinate and average rating from textual reviews."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "pandas>=2.2.3",
+    "torch>=2.7.0",
 ]
