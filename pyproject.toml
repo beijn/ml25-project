@@ -5,6 +5,11 @@ description = "Predict AirBnB price from coordinate and average rating from text
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "ipykernel>=6.29.5",
+    "mosaicml>=0.31.0",
     "pandas>=2.2.3",
+    "pip>=25.1.1",
+    "seaborn>=0.13.2",
     "torch>=2.7.0",
 ]
+
