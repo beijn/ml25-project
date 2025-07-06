@@ -1,8 +1,8 @@
 #%% 
 # TODO Beni yayyy
-
+# 
 from preprocess_data import preprocess_data
-from siren import siren_model
+from siren import Siren
 
 import torch 
 from torch import nn
@@ -22,12 +22,11 @@ DRAFTING = not torch.cuda.is_available() # if we only have CPU only check if it 
 class SIREN(ComposerModel):
   def __init__(self):
     super().__init__()
-    self.model = siren_model([2, *([100,100] if DRAFTING else [256, 128, 64, 32]), 1])
+    self.model = Siren([2, *([100,100] if DRAFTING else [256, 128, 64, 32]), 1])
   def forward(self, batch): return self.model(batch[0])
   def loss(self, outputs, batch):
     _, targets = batch
     return nn.MSELoss()(outputs, targets)
-
 class DummyDataset(Dataset):
   def __init__(self, size=1000):
     self.size = size
