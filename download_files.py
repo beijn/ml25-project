@@ -45,4 +45,3 @@ def extract_file_gz(path:Path, into='./cache/'):
 def download_and_extract(url, redownload=False):
   archive_path = download_file(url,redownload=redownload)
   return extract_file_gz(archive_path)
-  
