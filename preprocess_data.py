@@ -9,10 +9,10 @@ def load_and_preprocess_data():
   df = pd.read_csv(csv_path)[['latitude', 'longitude', 'price']].dropna()
     
   coords = df[['latitude', 'longitude']].values.astype(np.float32)
-  prices = df['price'].apply(lambda s: s.removeprefix('$').replace(',','')).values.astype(np.float32).reshape((-1,1))
+  prices = df['price'].apply(lambda s: s.removeprefix('$').replace(',','')).values.astype(np.float32).reshape((-1,1))/100
 
-  coord_scaler = MinMaxScaler()
-  price_scaler = MinMaxScaler()
+  coord_scaler = MinMaxScaler((0,1))
+  price_scaler = MinMaxScaler((0,1))
   
   coords_scaled = coord_scaler.fit_transform(coords)
   prices_scaled = price_scaler.fit_transform(prices)
