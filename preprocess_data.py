@@ -14,6 +14,7 @@ def load_and_preprocess_data():
   coord_scaler = MinMaxScaler((0,1))
   price_scaler = MinMaxScaler((0,1))
   
+  
   coords_scaled = coord_scaler.fit_transform(coords)
   prices_scaled = price_scaler.fit_transform(prices)
 

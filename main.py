@@ -10,9 +10,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import time
 import pandas as pd
-import geopandas as gpd
-import contextily as ctx
-import matplotlib.pyplot as plt
+import os
+import folium
+from folium.plugins import HeatMap
+import branca.colormap as cm
+from sklearn.preprocessing import MinMaxScaler
 
 torch.manual_seed(42) # For replicability
 
@@ -80,38 +82,113 @@ sns.lineplot(x=range(len(losses)), y=losses, label='Loss')
 plt.title("Training Loss over Iterations")
 plt.show()
 
-# %% Plot Predicted Price Map on Hong Kong Basemap
-coords, prices, coord_scaler, price_scaler = load_and_preprocess_data()
-coords_tensor = torch.tensor(coords, dtype=torch.float32)
-prices_tensor = torch.tensor(prices, dtype=torch.float32)
-model.eval()
-with torch.no_grad():
-    preds = model(coords_tensor).squeeze().numpy()
-    preds = np.clip(preds, 0, 1)  # clip predictions if target scaled [0,1]
+# %% Define Heatmap Generator
 
-df = pd.DataFrame({
-    'latitude': coords[:,0],
-    'longitude': coords[:,1],
-    'predicted_price': preds,
+
+def generate_prediction_heatmap(
+    df,
+    price_column='predicted_price',
+    output_path='hongkong_price_heatmap.html',
+    coord_scaler=None,
+    price_scaler=None,
+    coords_scaled=None
+):
+    """
+    Generate a heatmap from model predictions on a real-world coordinate map.
+
+    Args:
+        df (pd.DataFrame): DataFrame with normalized 'latitude', 'longitude', and price_column.
+        price_column (str): Column name with price or predicted price (already normalized).
+        output_path (str): Where to save the HTML file.
+        coord_scaler (MinMaxScaler): scaler used to normalize lat/lon coords (for inverse transform).
+        price_scaler (MinMaxScaler): scaler used to normalize prices (for inverse transform).
+    """
+    required_columns = {'latitude', 'longitude', price_column}
+    if not required_columns.issubset(df.columns):
+        raise ValueError(f"DataFrame must contain columns: {required_columns}")
+    if coord_scaler is None or price_scaler is None:
+        raise ValueError("coord_scaler and price_scaler must be provided for denormalization.")
+
+    df = df.dropna(subset=['latitude', 'longitude', price_column])
+
+    # Denormalize lat/lon to real coordinates
+    coords_denorm = coord_scaler.inverse_transform(df[['latitude', 'longitude']])
+    df['latitude_denorm'] = coords_denorm[:, 0]
+    df['longitude_denorm'] = coords_denorm[:, 1]
+
+    # Use normalized prices for heatmap intensity
+    heat_data = df[['latitude_denorm', 'longitude_denorm', price_column]].values.tolist()
+
+    # Create map centered roughly at mean coordinate (denormalized)
+    center_lat = df['latitude_denorm'].mean()
+    center_lon = df['longitude_denorm'].mean()
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
+
+    # Add heatmap layer
+    HeatMap(heat_data, radius=15, max_zoom=13).add_to(m)
+
+    # Denormalize prices for the legend
+    denorm_price_min = price_scaler.inverse_transform([[df[price_column].min()]])[0][0]
+    denorm_price_max = price_scaler.inverse_transform([[df[price_column].max()]])[0][0]
+
+    colormap = cm.LinearColormap(
+        colors=['blue', 'lime', 'red'],
+        vmin=denorm_price_min,
+        vmax=denorm_price_max,
+        caption='Predicted Price (denormalized)'
+    )
+    colormap.add_to(m)
+
+    # === Add original training data points as dots ===
+    original_coords = coord_scaler.inverse_transform(coords_scaled)  # coords_scaled from your data loading
+    for lat, lon in original_coords:
+      folium.CircleMarker(
+        location=[lat, lon],
+        radius=2,
+        color='black',
+        fill=True,
+        fill_opacity=0.6,
+        weight=0
+      ).add_to(m)
+
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Save HTML map
+    m.save(output_path)
+    print(f"✅ Heatmap saved as '{output_path}'")
+    print(f"Price range shown in legend: {denorm_price_min:.2f} to {denorm_price_max:.2f}")
+
+
+# %% Generate Heatmap with Predictions
+
+# Load and preprocess your data
+coords_scaled, prices_scaled, coord_scaler, price_scaler = load_and_preprocess_data()
+
+
+# Assuming you have a trained model and _T is your tensor transform function:
+import torch
+
+with torch.no_grad():
+    coords_tensor = _T(coords_scaled)  # Your tensor conversion here
+    preds = model(coords_tensor).squeeze().numpy()  # Model predictions, expected normalized in [0,1]
+
+# Prepare DataFrame for heatmap generation
+predictions_df = pd.DataFrame({
+    'latitude': coords_scaled[:, 0],    # normalized latitudes
+    'longitude': coords_scaled[:, 1],   # normalized longitudes
+    'predicted_price': preds             # normalized predicted prices
 })
 
-gdf = gpd.GeoDataFrame(
-    df,
-    geometry=gpd.points_from_xy(df.longitude, df.latitude),
-    crs="EPSG:4326"
-).to_crs(epsg=3857)
-
-fig, ax = plt.subplots(figsize=(12, 10))
-gdf.plot(
-    ax=ax,
-    column='predicted_price',
-    cmap='cividis',
-    markersize=30,
-    alpha=0.7,
-    legend=True,
-    legend_kwds={'label': 'Predicted Price (scaled)'}
+# Generate the heatmap with denormalization for coordinates and price legend
+generate_prediction_heatmap(
+    predictions_df,
+    price_column='predicted_price',
+    output_path='outputs/hongkong_price_heatmap.html',
+    coord_scaler=coord_scaler,
+    price_scaler=price_scaler,
+    coords_scaled=coords_scaled
 )
-ctx.add_basemap(ax, source=ctx.providers.Esri.WorldImagery)
-ax.set_axis_off()
-plt.title("Airbnb Predicted Price Map Over Hong Kong")
-plt.show()
+
+
+# %%
