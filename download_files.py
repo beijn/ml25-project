@@ -45,3 +45,10 @@ def extract_file_gz(path:Path, into='./cache/'):
 def download_and_extract(url, redownload=False):
   archive_path = download_file(url,redownload=redownload)
   return extract_file_gz(archive_path)
+if __name__ == "__main__":
+    print("Starting download...")
+    download_and_extract(listings_url, redownload=True)
+    download_and_extract(reviews_url, redownload=True)
+    print("Download finished!")
+
+# %%
